@@ -1,6 +1,13 @@
 import React, { Component, Fragment } from 'react';
-import { Query } from 'react-apollo';
+import { Query, Mutation } from 'react-apollo';
 import recipesQuery from './recipesQuery';
+import gql from 'graphql-tag';
+
+const updateRecipeStarredMutation = gql`
+  mutation updateRecipeStarred($id: ID!, $isStarred: Boolean!) {
+    updateRecipeStarred(id: $id, isStarred: $isStarred) @client
+  }
+`;
 
 class Recipes extends Component {
   state = { vegetarian: false }
@@ -30,8 +37,44 @@ class Recipes extends Component {
 
             return (
               <ul>
-                {data.recipes.map(({ id, title }) =>
-                  <li key={id}>{title}</li>
+                {data.recipes.map(({ id, title, isStarred }) =>
+                  <li key={id}>
+                    {title}
+                    <Mutation
+                      mutation={updateRecipeStarredMutation}
+                      refetchQueries={[
+                        {
+                          query: recipesQuery,
+                          variables: { vegetarian: false }
+                        },
+                        {
+                          query: recipesQuery,
+                          variables: { vegetarian: true }
+                        }
+                      ]}
+                      awaitRefetchQueries={true}
+                    >
+                      {(updateRecipeStarred, { loading, error }) => (
+                        <button
+                          onClick={() =>
+                            updateRecipeStarred({
+                              variables: {
+                                id,
+                                isStarred: !isStarred
+                              }
+                            })
+                          }
+                          style={{
+                            color: isStarred ? 'orange' : 'grey',
+                            animation: loading ?
+                              'inflate 0.7s ease infinite alternate' : 'none'
+                          }}
+                        >
+                          * {error && 'Failed to update'}
+                        </button>
+                      )}
+                    </Mutation>
+                  </li>
                 )}
               </ul>
             );
